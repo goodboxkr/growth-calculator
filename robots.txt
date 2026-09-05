@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://whrbwkd.github.io/growth-calculator/sitemap.xml
