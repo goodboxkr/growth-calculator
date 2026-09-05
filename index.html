@@ -95,9 +95,20 @@
     font-size:13px; color:#78350f; margin-top:14px;
   }
   footer{text-align:center; color:#9aa0b0; font-size:12px; margin-top:24px;}
+  .cp-side{position:fixed;top:50%;transform:translateY(-50%);width:160px;z-index:100;}
+  .cp-side.left{left:16px;}
+  .cp-side.right{right:16px;}
+  .cp-side iframe{display:block;}
+  .cp-side .cp-note{font-size:10px;color:var(--sub);text-align:center;margin-top:4px;line-height:1.4;}
+  @media (max-width: 1180px){.cp-side{display:none;}}
+  .cp-bottom{max-width:728px;margin:20px auto 0;overflow:hidden;}
+  .cp-bottom-inner{transform-origin:top left;}
+  .cp-bottom .cp-note{font-size:11px;color:var(--sub);text-align:center;margin-top:6px;}
 </style>
 </head>
 <body>
+<div class="cp-side left"><iframe src="https://ads-partners.coupang.com/widgets.html?id=1026276&template=banner&trackingCode=AF4842061&subId=&width=160&height=600" width="160" height="600" frameborder="0" scrolling="no" referrerpolicy="unsafe-url"></iframe><div class="cp-note">쿠팡 파트너스 활동으로<br>일정 수수료를 제공받습니다</div></div>
+<div class="cp-side right"><iframe src="https://ads-partners.coupang.com/widgets.html?id=1026276&template=banner&trackingCode=AF4842061&subId=&width=160&height=600" width="160" height="600" frameborder="0" scrolling="no" referrerpolicy="unsafe-url"></iframe><div class="cp-note">쿠팡 파트너스 활동으로<br>일정 수수료를 제공받습니다</div></div>
 <div class="wrap">
   <h1>👶 영유아 성장 백분위 계산기</h1>
   <p class="sub">질병관리청·대한소아청소년과학회 2017년 성장도표 기준 · 0~7세</p>
@@ -171,9 +182,28 @@
     </div>
   </div>
 
+  <div class="cp-bottom">
+    <div class="cp-bottom-inner" style="width:728px;height:90px;"><iframe src="https://ads-partners.coupang.com/widgets.html?id=1026272&template=banner&trackingCode=AF4842061&subId=&width=728&height=90" width="728" height="90" frameborder="0" scrolling="no" referrerpolicy="unsafe-url"></iframe></div>
+    <div class="cp-note">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다</div>
+  </div>
+
   <footer>본 계산기는 질병관리청·대한소아청소년과학회 2017년 소아청소년 성장도표(국민건강보험공단 영유아 건강검진용 재배포 자료)를 기준으로 하며, 의학적 진단을 대체하지 않습니다. 성장에 대한 우려가 있으면 소아과 전문의와 상담하세요.</footer>
 </div>
 
+<script>
+(function(){
+  function fit(){
+    document.querySelectorAll('.cp-bottom').forEach(function(box){
+      var inner = box.querySelector('.cp-bottom-inner');
+      var ratio = Math.min(1, box.clientWidth/728);
+      inner.style.transform = 'scale('+ratio+')';
+      box.style.height = (90*ratio)+'px';
+    });
+  }
+  window.addEventListener('resize', fit);
+  fit();
+})();
+</script>
 <script>
 // ============ 질병관리청·대한소아청소년과학회 2017년 소아청소년 성장도표 LMS 데이터 (0~84개월) ============
 // 출처: 공공데이터포털(data.go.kr) "국민건강보험공단_영유아성장도표LMS기준" — 2017년 KDCA 성장도표 원자료
