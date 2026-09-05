@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>영유아 성장 백분위 계산기</title>
+<meta name="description" content="질병관리청·대한소아청소년과학회 2017년 성장도표 기준으로 우리 아이 키·몸무게가 또래 대비 몇 %인지 바로 확인. 부모 키를 넣으면 예상 성인 키·몸무게까지.">
+<style>
+  :root{
+    --accent:#3b82f6;
+    --accent-dark:#2563eb;
+    --pink:#ec4899;
+    --bg:#f2f5f9;
+    --card:#ffffff;
+    --text:#1a1d29;
+    --sub:#5b6072;
+    --border:#e3e6ee;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:20px 14px 60px;
+    background:var(--bg); color:var(--text);
+    font-family:'Malgun Gothic',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    line-height:1.6;
+  }
+  .wrap{max-width:520px; margin:0 auto;}
+  h1{font-size:1.55rem; text-align:center; margin:6px 0 4px;}
+  .sub{text-align:center; color:var(--sub); font-size:14px; margin-bottom:22px;}
+  .card{background:var(--card); border-radius:18px; padding:22px 20px; margin-bottom:16px; box-shadow:0 4px 14px rgba(0,0,0,0.06);}
+  .genderRow{display:flex; gap:10px; margin-bottom:16px;}
+  .genderBtn{
+    flex:1; padding:14px; border-radius:12px; border:2px solid var(--border);
+    background:#fff; font-size:16px; font-weight:700; cursor:pointer; color:var(--sub);
+  }
+  .genderBtn.active[data-g="boy"]{border-color:var(--accent); background:#eff6ff; color:var(--accent-dark);}
+  .genderBtn.active[data-g="girl"]{border-color:var(--pink); background:#fdf2f8; color:#be185d;}
+  label{display:block; font-size:13.5px; font-weight:700; color:var(--sub); margin:14px 0 6px;}
+  label:first-of-type{margin-top:0;}
+  input[type="date"], input[type="number"]{
+    width:100%; padding:13px 14px; border:2px solid var(--border); border-radius:12px;
+    font-size:16px; color:var(--text); background:#fafbfd;
+  }
+  input:focus{outline:none; border-color:var(--accent);}
+  .row2{display:flex; gap:12px;}
+  .row2 > div{flex:1;}
+  .btn{
+    width:100%; margin-top:20px; padding:16px; border:none; border-radius:12px;
+    background:var(--accent); color:#fff; font-size:17px; font-weight:800; cursor:pointer;
+  }
+  .btn:hover{background:var(--accent-dark);}
+  .btn.secondary{background:#fff; color:var(--accent-dark); border:2px solid var(--accent); margin-top:10px;}
+  .hidden{display:none;}
+  .resultCard{padding:20px 18px;}
+  .resultTitle{font-size:15px; font-weight:800; color:var(--sub); margin-bottom:2px;}
+  .resultBig{font-size:1.9rem; font-weight:900; margin:2px 0 10px;}
+  .resultBig.height{color:var(--accent-dark);}
+  .resultBig.weight{color:#be185d;}
+  canvas{width:100%; height:auto; display:block;}
+  .desc{font-size:13.5px; color:var(--sub); margin-top:8px;}
+  .divider{height:1px; background:var(--border); margin:22px 0;}
+  .toggleLink{
+    text-align:center; color:var(--accent-dark); font-weight:700; font-size:14.5px;
+    cursor:pointer; margin-top:6px; user-select:none;
+  }
+  .predictBox{margin-top:18px;}
+  .predictResult{
+    background:#eff6ff; border-radius:14px; padding:18px; text-align:center; margin-top:14px;
+  }
+  .predictResult .label{font-size:13px; color:var(--sub); font-weight:700;}
+  .predictResult .value{font-size:1.6rem; font-weight:900; color:var(--accent-dark); margin:4px 0;}
+  .predictResult .range{font-size:13px; color:var(--sub);}
+  .note{
+    background:#fff8e6; border:1px solid #fde68a; border-radius:12px; padding:14px 16px;
+    font-size:13px; color:#78350f; margin-top:14px;
+  }
+  footer{text-align:center; color:#9aa0b0; font-size:12px; margin-top:24px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>👶 영유아 성장 백분위 계산기</h1>
+  <p class="sub">질병관리청·대한소아청소년과학회 2017년 성장도표 기준 · 0~7세</p>
+
+  <div class="card">
+    <div class="genderRow">
+      <button class="genderBtn active" data-g="boy" id="btn-boy">👦 남아</button>
+      <button class="genderBtn" data-g="girl" id="btn-girl">👧 여아</button>
+    </div>
+
+    <label>생년월일</label>
+    <input type="date" id="birthdate">
+
+    <label>측정일 (기본: 오늘)</label>
+    <input type="date" id="measureDate">
+
+    <div class="row2">
+      <div>
+        <label>키 (cm)</label>
+        <input type="number" id="height" placeholder="예: 75.5" step="0.1">
+      </div>
+      <div>
+        <label>몸무게 (kg)</label>
+        <input type="number" id="weight" placeholder="예: 9.2" step="0.1">
+      </div>
+    </div>
+
+    <button class="btn" id="calcBtn">백분위 확인하기</button>
+    <div id="ageWarning" class="note hidden"></div>
+  </div>
+
+  <div id="results" class="hidden">
+    <div class="card resultCard">
+      <div class="resultTitle">📏 키</div>
+      <div class="resultBig height" id="heightResultText">-</div>
+      <canvas id="heightChart" width="600" height="180"></canvas>
+      <div class="desc" id="heightDesc"></div>
+    </div>
+
+    <div class="card resultCard">
+      <div class="resultTitle">⚖️ 몸무게</div>
+      <div class="resultBig weight" id="weightResultText">-</div>
+      <canvas id="weightChart" width="600" height="180"></canvas>
+      <div class="desc" id="weightDesc"></div>
+    </div>
+
+    <div class="toggleLink" id="showPredictToggle">🔮 부모님 키 입력하고 예상 성인 키·몸무게 보기 ›</div>
+
+    <div class="card predictBox hidden" id="predictBox">
+      <label>아빠 키 (cm)</label>
+      <input type="number" id="dadHeight" placeholder="예: 175">
+      <label>엄마 키 (cm)</label>
+      <input type="number" id="momHeight" placeholder="예: 162">
+      <button class="btn secondary" id="predictBtn">예상 성인 키·몸무게 계산</button>
+
+      <div id="predictResults" class="hidden">
+        <div class="predictResult">
+          <div class="label">예상 성인 키 (유전 목표키)</div>
+          <div class="value" id="predictHeight">-</div>
+          <div class="range" id="predictHeightRange"></div>
+        </div>
+        <div class="predictResult">
+          <div class="label">예상 성인 정상 체중 범위</div>
+          <div class="value" id="predictWeight">-</div>
+          <div class="range">예상 키 기준 정상 BMI(18.5~23) 범위로 추정</div>
+        </div>
+        <div class="note">
+          이 예측은 "유전 목표키(mid-parental height)" 공식을 사용한 참고용 추정치로, 실제 키와 ±8~9cm 정도 차이가 날 수 있어요. 영양, 수면, 운동 등 환경 요인에 따라 실제 성인 키는 달라질 수 있습니다.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>본 계산기는 질병관리청·대한소아청소년과학회 2017년 소아청소년 성장도표(국민건강보험공단 영유아 건강검진용 재배포 자료)를 기준으로 하며, 의학적 진단을 대체하지 않습니다. 성장에 대한 우려가 있으면 소아과 전문의와 상담하세요.</footer>
+</div>
+
+<script>
+// ============ 질병관리청·대한소아청소년과학회 2017년 소아청소년 성장도표 LMS 데이터 (0~84개월) ============
+// 출처: 공공데이터포털(data.go.kr) "국민건강보험공단_영유아성장도표LMS기준" — 2017년 KDCA 성장도표 원자료
+const KDCA_WFA_BOYS = [{month:0, L:0.3487, M:3.3464, S:0.146},{month:1, L:0.2297, M:4.4709, S:0.134},{month:2, L:0.197, M:5.5675, S:0.1239},{month:3, L:0.1738, M:6.3762, S:0.1173},{month:4, L:0.1553, M:7.0023, S:0.1132},{month:5, L:0.1395, M:7.5105, S:0.1108},{month:6, L:0.1257, M:7.934, S:0.1096},{month:7, L:0.1134, M:8.297, S:0.109},{month:8, L:0.1021, M:8.6151, S:0.1088},{month:9, L:0.0917, M:8.9014, S:0.1088},{month:10, L:0.082, M:9.1649, S:0.1089},{month:11, L:0.073, M:9.4122, S:0.1091},{month:12, L:0.0644, M:9.6479, S:0.1093},{month:13, L:0.0563, M:9.8749, S:0.1095},{month:14, L:0.0487, M:10.0953, S:0.1098},{month:15, L:0.0413, M:10.3108, S:0.1101},{month:16, L:0.0343, M:10.5228, S:0.1104},{month:17, L:0.0275, M:10.7319, S:0.1108},{month:18, L:0.0211, M:10.9385, S:0.1112},{month:19, L:0.0148, M:11.143, S:0.1116},{month:20, L:0.0087, M:11.3462, S:0.1121},{month:21, L:0.0029, M:11.5486, S:0.1126},{month:22, L:-0.0028, M:11.7504, S:0.1131},{month:23, L:-0.0083, M:11.9514, S:0.1137},{month:24, L:-0.0137, M:12.1515, S:0.1143},{month:25, L:-0.0189, M:12.3502, S:0.1149},{month:26, L:-0.024, M:12.5466, S:0.1154},{month:27, L:-0.0289, M:12.7401, S:0.116},{month:28, L:-0.0337, M:12.9303, S:0.1166},{month:29, L:-0.0385, M:13.1169, S:0.1172},{month:30, L:-0.0431, M:13.3, S:0.1178},{month:31, L:-0.0476, M:13.4798, S:0.1184},{month:32, L:-0.052, M:13.6567, S:0.119},{month:33, L:-0.0564, M:13.8309, S:0.1195},{month:34, L:-0.0606, M:14.0031, S:0.1201},{month:35, L:-0.0648, M:14.1736, S:0.1206},{month:36, L:0.0567, M:14.7381, S:0.0969},{month:37, L:-0.0147, M:14.911, S:0.0981},{month:38, L:-0.0804, M:15.0839, S:0.0994},{month:39, L:-0.1409, M:15.2569, S:0.1005},{month:40, L:-0.1966, M:15.4299, S:0.1016},{month:41, L:-0.2481, M:15.603, S:0.1027},{month:42, L:-0.299, M:15.7775, S:0.1038},{month:43, L:-0.3461, M:15.9521, S:0.1049},{month:44, L:-0.3895, M:16.1268, S:0.106},{month:45, L:-0.4297, M:16.3015, S:0.107},{month:46, L:-0.4669, M:16.4763, S:0.108},{month:47, L:-0.5013, M:16.6512, S:0.1089},{month:48, L:-0.5361, M:16.8276, S:0.1099},{month:49, L:-0.5684, M:17.0041, S:0.1109},{month:50, L:-0.5983, M:17.1807, S:0.1118},{month:51, L:-0.6261, M:17.3573, S:0.1127},{month:52, L:-0.6518, M:17.534, S:0.1136},{month:53, L:-0.6758, M:17.7108, S:0.1144},{month:54, L:-0.6999, M:17.8888, S:0.1153},{month:55, L:-0.7222, M:18.067, S:0.1162},{month:56, L:-0.743, M:18.2452, S:0.117},{month:57, L:-0.7623, M:18.4235, S:0.1178},{month:58, L:-0.7803, M:18.6018, S:0.1186},{month:59, L:-0.7971, M:18.7802, S:0.1194},{month:60, L:-0.8162, M:18.9625, S:0.1202},{month:61, L:-0.8339, M:19.1449, S:0.1211},{month:62, L:-0.8503, M:19.3274, S:0.1219},{month:63, L:-0.8655, M:19.51, S:0.1227},{month:64, L:-0.8797, M:19.6926, S:0.1235},{month:65, L:-0.893, M:19.8753, S:0.1242},{month:66, L:-0.9106, M:20.0814, S:0.1254},{month:67, L:-0.9264, M:20.2877, S:0.1265},{month:68, L:-0.9407, M:20.4941, S:0.1275},{month:69, L:-0.9536, M:20.7007, S:0.1286},{month:70, L:-0.9653, M:20.9073, S:0.1296},{month:71, L:-0.9757, M:21.1141, S:0.1306},{month:72, L:-0.9753, M:21.3417, S:0.1318},{month:73, L:-0.9743, M:21.5693, S:0.133},{month:74, L:-0.973, M:21.797, S:0.1342},{month:75, L:-0.9714, M:22.0247, S:0.1353},{month:76, L:-0.9694, M:22.2524, S:0.1364},{month:77, L:-0.9672, M:22.4802, S:0.1375},{month:78, L:-0.9576, M:22.7267, S:0.1388},{month:79, L:-0.9481, M:22.9732, S:0.14},{month:80, L:-0.9388, M:23.2196, S:0.1412},{month:81, L:-0.9298, M:23.4661, S:0.1424},{month:82, L:-0.921, M:23.7126, S:0.1436},{month:83, L:-0.9124, M:23.9591, S:0.1447},{month:84, L:-0.8993, M:24.2214, S:0.146}];
+const KDCA_WFA_GIRLS = [{month:0, L:0.3809, M:3.2322, S:0.1417},{month:1, L:0.1714, M:4.1873, S:0.1372},{month:2, L:0.0962, M:5.1282, S:0.13},{month:3, L:0.0402, M:5.8458, S:0.1262},{month:4, L:-0.005, M:6.4237, S:0.124},{month:5, L:-0.043, M:6.8985, S:0.1227},{month:6, L:-0.0756, M:7.297, S:0.122},{month:7, L:-0.1039, M:7.6422, S:0.1218},{month:8, L:-0.1288, M:7.9487, S:0.1218},{month:9, L:-0.1507, M:8.2254, S:0.122},{month:10, L:-0.17, M:8.48, S:0.1222},{month:11, L:-0.1872, M:8.7192, S:0.1225},{month:12, L:-0.2024, M:8.9481, S:0.1227},{month:13, L:-0.2158, M:9.1699, S:0.1228},{month:14, L:-0.2278, M:9.387, S:0.1229},{month:15, L:-0.2384, M:9.6008, S:0.123},{month:16, L:-0.2478, M:9.8124, S:0.123},{month:17, L:-0.2562, M:10.0226, S:0.1231},{month:18, L:-0.2637, M:10.2315, S:0.1231},{month:19, L:-0.2703, M:10.4393, S:0.1232},{month:20, L:-0.2762, M:10.6464, S:0.1232},{month:21, L:-0.2815, M:10.8534, S:0.1234},{month:22, L:-0.2862, M:11.0608, S:0.1235},{month:23, L:-0.2903, M:11.2688, S:0.1237},{month:24, L:-0.2941, M:11.4775, S:0.1239},{month:25, L:-0.2975, M:11.6864, S:0.1241},{month:26, L:-0.3005, M:11.8947, S:0.1244},{month:27, L:-0.3032, M:12.1015, S:0.1247},{month:28, L:-0.3057, M:12.3059, S:0.1251},{month:29, L:-0.308, M:12.5073, S:0.1255},{month:30, L:-0.3101, M:12.7055, S:0.1259},{month:31, L:-0.312, M:12.9006, S:0.1263},{month:32, L:-0.3138, M:13.093, S:0.1268},{month:33, L:-0.3155, M:13.2837, S:0.1274},{month:34, L:-0.3171, M:13.4731, S:0.1279},{month:35, L:-0.3186, M:13.6618, S:0.1286},{month:36, L:0.5656, M:14.1998, S:0.0991},{month:37, L:0.4441, M:14.3701, S:0.1004},{month:38, L:0.3317, M:14.5405, S:0.1017},{month:39, L:0.2276, M:14.7108, S:0.103},{month:40, L:0.1312, M:14.8813, S:0.1042},{month:41, L:0.042, M:15.0518, S:0.1053},{month:42, L:-0.0428, M:15.2236, S:0.1064},{month:43, L:-0.1212, M:15.3956, S:0.1075},{month:44, L:-0.1938, M:15.5676, S:0.1086},{month:45, L:-0.2611, M:15.7399, S:0.1096},{month:46, L:-0.3236, M:15.9123, S:0.1105},{month:47, L:-0.3816, M:16.0848, S:0.1114},{month:48, L:-0.4372, M:16.2585, S:0.1124},{month:49, L:-0.4888, M:16.4324, S:0.1133},{month:50, L:-0.5367, M:16.6064, S:0.1142},{month:51, L:-0.5813, M:16.7806, S:0.115},{month:52, L:-0.6227, M:16.9549, S:0.1159},{month:53, L:-0.6613, M:17.1294, S:0.1167},{month:54, L:-0.6987, M:17.3046, S:0.1175},{month:55, L:-0.7335, M:17.48, S:0.1183},{month:56, L:-0.766, M:17.6555, S:0.119},{month:57, L:-0.7962, M:17.8311, S:0.1198},{month:58, L:-0.8245, M:18.0069, S:0.1205},{month:59, L:-0.8509, M:18.1827, S:0.1212},{month:60, L:-0.876, M:18.3616, S:0.122},{month:61, L:-0.8993, M:18.5405, S:0.1228},{month:62, L:-0.921, M:18.7196, S:0.1236},{month:63, L:-0.9412, M:18.8988, S:0.1243},{month:64, L:-0.96, M:19.078, S:0.125},{month:65, L:-0.9776, M:19.2574, S:0.1258},{month:66, L:-0.984, M:19.4555, S:0.127},{month:67, L:-0.9894, M:19.6537, S:0.1281},{month:68, L:-0.9941, M:19.8519, S:0.1293},{month:69, L:-0.9981, M:20.0502, S:0.1304},{month:70, L:-1.0014, M:20.2485, S:0.1315},{month:71, L:-1.0041, M:20.4468, S:0.1326},{month:72, L:-0.9954, M:20.6619, S:0.134},{month:73, L:-0.9868, M:20.8769, S:0.1354},{month:74, L:-0.9784, M:21.092, S:0.1367},{month:75, L:-0.97, M:21.3071, S:0.138},{month:76, L:-0.9618, M:21.5221, S:0.1392},{month:77, L:-0.9537, M:21.7372, S:0.1405},{month:78, L:-0.9411, M:21.9702, S:0.1419},{month:79, L:-0.9288, M:22.2032, S:0.1432},{month:80, L:-0.9169, M:22.4363, S:0.1445},{month:81, L:-0.9054, M:22.6693, S:0.1459},{month:82, L:-0.8942, M:22.9023, S:0.1471},{month:83, L:-0.8833, M:23.1353, S:0.1484},{month:84, L:-0.8685, M:23.387, S:0.1497}];
+const KDCA_HFA_BOYS = [{month:0, L:1, M:49.8842, S:0.038},{month:1, L:1, M:54.7244, S:0.0356},{month:2, L:1, M:58.4249, S:0.0342},{month:3, L:1, M:61.4292, S:0.0333},{month:4, L:1, M:63.886, S:0.0326},{month:5, L:1, M:65.9026, S:0.032},{month:6, L:1, M:67.6236, S:0.0317},{month:7, L:1, M:69.1645, S:0.0314},{month:8, L:1, M:70.5994, S:0.0312},{month:9, L:1, M:71.9687, S:0.0312},{month:10, L:1, M:73.2812, S:0.0312},{month:11, L:1, M:74.5388, S:0.0313},{month:12, L:1, M:75.7488, S:0.0314},{month:13, L:1, M:76.9186, S:0.0315},{month:14, L:1, M:78.0497, S:0.0317},{month:15, L:1, M:79.1458, S:0.032},{month:16, L:1, M:80.2113, S:0.0322},{month:17, L:1, M:81.2487, S:0.0325},{month:18, L:1, M:82.2587, S:0.0328},{month:19, L:1, M:83.2418, S:0.0331},{month:20, L:1, M:84.1996, S:0.0334},{month:21, L:1, M:85.1348, S:0.0338},{month:22, L:1, M:86.0477, S:0.0341},{month:23, L:1, M:86.941, S:0.0345},{month:24, L:1, M:87.1161, S:0.0351},{month:25, L:1, M:87.972, S:0.0354},{month:26, L:1, M:88.8065, S:0.0358},{month:27, L:1, M:89.6197, S:0.0361},{month:28, L:1, M:90.412, S:0.0364},{month:29, L:1, M:91.1828, S:0.0367},{month:30, L:1, M:91.9327, S:0.037},{month:31, L:1, M:92.6631, S:0.0373},{month:32, L:1, M:93.3753, S:0.0376},{month:33, L:1, M:94.0711, S:0.0379},{month:34, L:1, M:94.7532, S:0.0381},{month:35, L:1, M:95.4236, S:0.0384},{month:36, L:-1.0915, M:96.4961, S:0.0403},{month:37, L:-1.0011, M:97.0464, S:0.0403},{month:38, L:-0.9126, M:97.5965, S:0.0402},{month:39, L:-0.8262, M:98.1463, S:0.0402},{month:40, L:-0.7418, M:98.6959, S:0.0402},{month:41, L:-0.6592, M:99.2452, S:0.0402},{month:42, L:-0.5827, M:99.793, S:0.0401},{month:43, L:-0.5077, M:100.3406, S:0.0401},{month:44, L:-0.4343, M:100.8881, S:0.0401},{month:45, L:-0.3625, M:101.4353, S:0.0401},{month:46, L:-0.2921, M:101.9824, S:0.0401},{month:47, L:-0.2232, M:102.5294, S:0.04},{month:48, L:-0.1597, M:103.0749, S:0.04},{month:49, L:-0.0975, M:103.6204, S:0.04},{month:50, L:-0.0364, M:104.1657, S:0.04},{month:51, L:0.0234, M:104.7109, S:0.0399},{month:52, L:0.0822, M:105.256, S:0.0399},{month:53, L:0.1398, M:105.8009, S:0.0399},{month:54, L:0.1897, M:106.344, S:0.0399},{month:55, L:0.2387, M:106.8869, S:0.0399},{month:56, L:0.2868, M:107.4298, S:0.0398},{month:57, L:0.3341, M:107.9726, S:0.0398},{month:58, L:0.3805, M:108.5153, S:0.0398},{month:59, L:0.4261, M:109.0579, S:0.0398},{month:60, L:0.4242, M:109.5896, S:0.0398},{month:61, L:0.4224, M:110.1212, S:0.0399},{month:62, L:0.4205, M:110.6529, S:0.0399},{month:63, L:0.4187, M:111.1846, S:0.0399},{month:64, L:0.4169, M:111.7162, S:0.04},{month:65, L:0.4151, M:112.2479, S:0.04},{month:66, L:0.3787, M:112.7735, S:0.04},{month:67, L:0.3429, M:113.299, S:0.0401},{month:68, L:0.3074, M:113.8245, S:0.0401},{month:69, L:0.2724, M:114.3501, S:0.0402},{month:70, L:0.2378, M:114.8756, S:0.0402},{month:71, L:0.2036, M:115.401, S:0.0403},{month:72, L:0.1783, M:115.9183, S:0.0403},{month:73, L:0.1533, M:116.4356, S:0.0404},{month:74, L:0.1287, M:116.9528, S:0.0404},{month:75, L:0.1044, M:117.4701, S:0.0405},{month:76, L:0.0805, M:117.9874, S:0.0405},{month:77, L:0.0569, M:118.5047, S:0.0406},{month:78, L:0.0563, M:119.0136, S:0.0406},{month:79, L:0.0557, M:119.5225, S:0.0406},{month:80, L:0.0552, M:120.0314, S:0.0406},{month:81, L:0.0546, M:120.5404, S:0.0406},{month:82, L:0.0541, M:121.0493, S:0.0406},{month:83, L:0.0536, M:121.5582, S:0.0406},{month:84, L:0.0492, M:122.0537, S:0.0406}];
+const KDCA_HFA_GIRLS = [{month:0, L:1, M:49.1477, S:0.0379},{month:1, L:1, M:53.6872, S:0.0364},{month:2, L:1, M:57.0673, S:0.0357},{month:3, L:1, M:59.8029, S:0.0352},{month:4, L:1, M:62.0899, S:0.0349},{month:5, L:1, M:64.0301, S:0.0346},{month:6, L:1, M:65.7311, S:0.0345},{month:7, L:1, M:67.2873, S:0.0344},{month:8, L:1, M:68.7498, S:0.0344},{month:9, L:1, M:70.1435, S:0.0344},{month:10, L:1, M:71.4818, S:0.0345},{month:11, L:1, M:72.771, S:0.0346},{month:12, L:1, M:74.015, S:0.0348},{month:13, L:1, M:75.2176, S:0.035},{month:14, L:1, M:76.3817, S:0.0351},{month:15, L:1, M:77.5099, S:0.0353},{month:16, L:1, M:78.6055, S:0.0356},{month:17, L:1, M:79.671, S:0.0358},{month:18, L:1, M:80.7079, S:0.036},{month:19, L:1, M:81.7182, S:0.0362},{month:20, L:1, M:82.7036, S:0.0364},{month:21, L:1, M:83.6654, S:0.0367},{month:22, L:1, M:84.604, S:0.0369},{month:23, L:1, M:85.5202, S:0.0371},{month:24, L:1, M:85.7153, S:0.0376},{month:25, L:1, M:86.5904, S:0.0379},{month:26, L:1, M:87.4462, S:0.0381},{month:27, L:1, M:88.283, S:0.0383},{month:28, L:1, M:89.1004, S:0.0385},{month:29, L:1, M:89.8991, S:0.0387},{month:30, L:1, M:90.6797, S:0.0389},{month:31, L:1, M:91.443, S:0.0391},{month:32, L:1, M:92.1906, S:0.0393},{month:33, L:1, M:92.9239, S:0.0395},{month:34, L:1, M:93.6444, S:0.0397},{month:35, L:1, M:94.3533, S:0.0399},{month:36, L:0.5472, M:95.4078, S:0.0413},{month:37, L:0.4997, M:95.9472, S:0.0412},{month:38, L:0.4525, M:96.4867, S:0.0411},{month:39, L:0.4056, M:97.0262, S:0.041},{month:40, L:0.359, M:97.5658, S:0.0409},{month:41, L:0.3126, M:98.1054, S:0.0408},{month:42, L:0.2825, M:98.6465, S:0.0407},{month:43, L:0.2526, M:99.1877, S:0.0406},{month:44, L:0.2229, M:99.7288, S:0.0405},{month:45, L:0.1934, M:100.27, S:0.0404},{month:46, L:0.164, M:100.8113, S:0.0403},{month:47, L:0.1348, M:101.3525, S:0.0402},{month:48, L:0.1129, M:101.8943, S:0.0401},{month:49, L:0.0912, M:102.4361, S:0.04},{month:50, L:0.0695, M:102.9779, S:0.0399},{month:51, L:0.048, M:103.5197, S:0.0398},{month:52, L:0.0267, M:104.0616, S:0.0397},{month:53, L:0.0054, M:104.6034, S:0.0396},{month:54, L:-0.0216, M:105.1425, S:0.0395},{month:55, L:-0.0484, M:105.6816, S:0.0395},{month:56, L:-0.0751, M:106.2208, S:0.0394},{month:57, L:-0.1016, M:106.76, S:0.0393},{month:58, L:-0.128, M:107.2992, S:0.0392},{month:59, L:-0.1543, M:107.8384, S:0.0391},{month:60, L:-0.1404, M:108.3714, S:0.039},{month:61, L:-0.1266, M:108.9045, S:0.039},{month:62, L:-0.113, M:109.4375, S:0.0389},{month:63, L:-0.0994, M:109.9706, S:0.0389},{month:64, L:-0.086, M:110.5036, S:0.0388},{month:65, L:-0.0726, M:111.0366, S:0.0388},{month:66, L:-0.0272, M:111.5656, S:0.0388},{month:67, L:0.0175, M:112.0946, S:0.0388},{month:68, L:0.0614, M:112.6235, S:0.0388},{month:69, L:0.1047, M:113.1523, S:0.0388},{month:70, L:0.1472, M:113.6811, S:0.0388},{month:71, L:0.1891, M:114.2098, S:0.0388},{month:72, L:0.2115, M:114.7289, S:0.0388},{month:73, L:0.2335, M:115.2479, S:0.0388},{month:74, L:0.255, M:115.767, S:0.0389},{month:75, L:0.2762, M:116.286, S:0.0389},{month:76, L:0.297, M:116.805, S:0.039},{month:77, L:0.3174, M:117.324, S:0.039},{month:78, L:0.2769, M:117.8257, S:0.0391},{month:79, L:0.2373, M:118.3274, S:0.0391},{month:80, L:0.1986, M:118.8292, S:0.0392},{month:81, L:0.1606, M:119.331, S:0.0393},{month:82, L:0.1235, M:119.8329, S:0.0394},{month:83, L:0.0872, M:120.3348, S:0.0394},{month:84, L:0.0163, M:120.8229, S:0.0396}];
+
+// ============ LMS 통계 함수 ============
+function getLMS(table, months) {
+  months = Math.max(0, Math.min(84, months));
+  const lo = Math.floor(months);
+  const hi = Math.ceil(months);
+  if (lo === hi) return table[lo];
+  const a = table[lo], b = table[hi];
+  const t = months - lo;
+  return {
+    L: a.L + (b.L - a.L) * t,
+    M: a.M + (b.M - a.M) * t,
+    S: a.S + (b.S - a.S) * t
+  };
+}
+function zScore(X, lms) {
+  const { L, M, S } = lms;
+  if (Math.abs(L) < 1e-6) return Math.log(X / M) / S;
+  return (Math.pow(X / M, L) - 1) / (L * S);
+}
+// 표준정규분포 누적분포함수 (Abramowitz-Stegun 근사)
+function normalCDF(z) {
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const d = 0.3989423 * Math.exp(-z * z / 2);
+  let p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+  if (z > 0) p = 1 - p;
+  return p;
+}
+function valueAtZ(z, lms) {
+  const { L, M, S } = lms;
+  if (Math.abs(L) < 1e-6) return M * Math.exp(S * z);
+  return M * Math.pow(1 + L * S * z, 1 / L);
+}
+
+function monthsBetween(birth, measure) {
+  const days = (measure - birth) / 86400000;
+  return days / 30.4375;
+}
+
+// ============ UI 상태 ============
+let gender = 'boy';
+document.getElementById('measureDate').valueAsDate = new Date();
+
+document.getElementById('btn-boy').addEventListener('click', () => setGender('boy'));
+document.getElementById('btn-girl').addEventListener('click', () => setGender('girl'));
+function setGender(g) {
+  gender = g;
+  document.getElementById('btn-boy').classList.toggle('active', g === 'boy');
+  document.getElementById('btn-girl').classList.toggle('active', g === 'girl');
+}
+
+function drawBellCurve(canvasId, z, color) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const marginX = 30, marginBottom = 26, top = 14;
+  const plotW = W - marginX * 2, plotH = H - top - marginBottom;
+  const zMin = -3.2, zMax = 3.2;
+
+  function xForZ(zz) { return marginX + (zz - zMin) / (zMax - zMin) * plotW; }
+  function gauss(zz) { return Math.exp(-zz * zz / 2); }
+
+  // 곡선
+  ctx.beginPath();
+  for (let i = 0; i <= 200; i++) {
+    const zz = zMin + (zMax - zMin) * i / 200;
+    const x = xForZ(zz);
+    const y = top + plotH - gauss(zz) * plotH * 0.95;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = '#c7cad6';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // -2SD ~ +2SD 기준선
+  [-2, -1, 0, 1, 2].forEach(zz => {
+    const x = xForZ(zz);
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, top + plotH);
+    ctx.strokeStyle = zz === 0 ? '#d1d5db' : '#eef0f4';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+
+  // 아이 위치 마커
+  const zClamped = Math.max(zMin, Math.min(zMax, z));
+  const markerX = xForZ(zClamped);
+  const markerY = top + plotH - gauss(zClamped) * plotH * 0.95;
+  ctx.beginPath();
+  ctx.moveTo(markerX, top + plotH);
+  ctx.lineTo(markerX, markerY);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 3]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.beginPath();
+  ctx.arc(markerX, markerY, 7, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // 라벨
+  ctx.fillStyle = '#9aa0b0';
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'center';
+  ['-2SD', '-1SD', '평균', '+1SD', '+2SD'].forEach((label, idx) => {
+    const zz = idx - 2;
+    ctx.fillText(label, xForZ(zz), H - 8);
+  });
+}
+
+document.getElementById('calcBtn').addEventListener('click', () => {
+  const birthEl = document.getElementById('birthdate');
+  const measureEl = document.getElementById('measureDate');
+  const heightVal = parseFloat(document.getElementById('height').value);
+  const weightVal = parseFloat(document.getElementById('weight').value);
+  const warnBox = document.getElementById('ageWarning');
+  warnBox.classList.add('hidden');
+
+  if (!birthEl.value || !measureEl.value || isNaN(heightVal) || isNaN(weightVal)) {
+    warnBox.textContent = '생년월일, 측정일, 키, 몸무게를 모두 입력해주세요.';
+    warnBox.classList.remove('hidden');
+    return;
+  }
+
+  const birth = new Date(birthEl.value);
+  const measure = new Date(measureEl.value);
+  const months = monthsBetween(birth, measure);
+
+  if (months < 0) {
+    warnBox.textContent = '측정일이 생년월일보다 빠를 수 없어요.';
+    warnBox.classList.remove('hidden');
+    return;
+  }
+  if (months > 84) {
+    warnBox.textContent = '이 계산기는 만 7세(84개월)까지 지원해요. 현재 나이: 약 ' + (months/12).toFixed(1) + '세';
+    warnBox.classList.remove('hidden');
+    return;
+  }
+
+  const hfaTable = gender === 'boy' ? KDCA_HFA_BOYS : KDCA_HFA_GIRLS;
+  const wfaTable = gender === 'boy' ? KDCA_WFA_BOYS : KDCA_WFA_GIRLS;
+
+  const hLms = getLMS(hfaTable, months);
+  const wLms = getLMS(wfaTable, months);
+  const hZ = zScore(heightVal, hLms);
+  const wZ = zScore(weightVal, wLms);
+  const hPct = normalCDF(hZ) * 100;
+  const wPct = normalCDF(wZ) * 100;
+
+  function describePercentile(pct) {
+    const top = 100 - pct;
+    if (pct >= 50) return `또래 중 상위 ${top.toFixed(1)}% (${pct.toFixed(1)}백분위수)`;
+    return `또래 중 하위 ${pct.toFixed(1)}% (${pct.toFixed(1)}백분위수)`;
+  }
+
+  document.getElementById('heightResultText').textContent = describePercentile(hPct);
+  document.getElementById('weightResultText').textContent = describePercentile(wPct);
+
+  const ageLabel = months < 1 ? `생후 ${Math.round(months*30.4375)}일` : `${(months/12).toFixed(0)}세 ${Math.round(months%12)}개월`;
+  document.getElementById('heightDesc').textContent = `${ageLabel} · ${gender==='boy'?'남아':'여아'} 평균 키는 약 ${hLms.M.toFixed(1)}cm예요.`;
+  document.getElementById('weightDesc').textContent = `${ageLabel} · ${gender==='boy'?'남아':'여아'} 평균 몸무게는 약 ${wLms.M.toFixed(1)}kg예요.`;
+
+  drawBellCurve('heightChart', hZ, '#2563eb');
+  drawBellCurve('weightChart', wZ, '#be185d');
+
+  document.getElementById('results').classList.remove('hidden');
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+});
+
+document.getElementById('showPredictToggle').addEventListener('click', () => {
+  document.getElementById('predictBox').classList.toggle('hidden');
+});
+
+document.getElementById('predictBtn').addEventListener('click', () => {
+  const dad = parseFloat(document.getElementById('dadHeight').value);
+  const mom = parseFloat(document.getElementById('momHeight').value);
+  if (isNaN(dad) || isNaN(mom)) return;
+
+  // 유전 목표키 (mid-parental height method)
+  const targetHeight = gender === 'boy' ? (dad + mom + 13) / 2 : (dad + mom - 13) / 2;
+  const rangeLow = targetHeight - 8.5;
+  const rangeHigh = targetHeight + 8.5;
+
+  document.getElementById('predictHeight').textContent = targetHeight.toFixed(1) + ' cm';
+  document.getElementById('predictHeightRange').textContent = `예상 범위: ${rangeLow.toFixed(0)}~${rangeHigh.toFixed(0)}cm (유전 목표키 ± 8.5cm)`;
+
+  // 정상 BMI(18.5~23) 기준 예상 체중 범위
+  const hM = targetHeight / 100;
+  const wLow = 18.5 * hM * hM;
+  const wHigh = 23 * hM * hM;
+  document.getElementById('predictWeight').textContent = `${wLow.toFixed(0)}~${wHigh.toFixed(0)} kg`;
+
+  document.getElementById('predictResults').classList.remove('hidden');
+});
+</script>
+</body>
+</html>
